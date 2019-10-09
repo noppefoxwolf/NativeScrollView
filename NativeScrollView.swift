@@ -41,6 +41,7 @@ struct ContentView_Previews : PreviewProvider {
 
 struct NativeScrollView<Content>: UIViewRepresentable where Content : View {
     typealias UIViewType = UIScrollView
+    private let axes: Axis.Set
     let content: () -> Content
     @Binding var contentOffset: CGPoint
     let didScroll: (UIScrollView) -> Void
@@ -50,6 +51,7 @@ struct NativeScrollView<Content>: UIViewRepresentable where Content : View {
          contentOffset: Binding<CGPoint>,
          didScroll: @escaping (UIScrollView) -> Void,
          @ViewBuilder content: @escaping () -> Content) {
+        self.axes = axes
         self.content = content
         self.didScroll = didScroll
         self._contentOffset = contentOffset
@@ -63,13 +65,29 @@ struct NativeScrollView<Content>: UIViewRepresentable where Content : View {
     
     func updateUIView(_ uiView: NativeScrollView.UIViewType, context: UIViewRepresentableContext<NativeScrollView>) {
         uiView.backgroundColor = .red
-        let hostingController = UIHostingController(rootView: content())
+        let rootView = makeRootView()
+        let hostingController = UIHostingController(rootView: rootView)
         let size = hostingController.sizeThatFits(in: CGSize(width: Int.max, height: Int.max))
         hostingController.view.backgroundColor = .green
         hostingController.view.frame = .init(origin: .zero, size: size)
         uiView.addSubview(hostingController.view)
         uiView.contentSize = size
         uiView.setContentOffset(contentOffset, animated: true)
+    }
+    
+    private func makeRootView() -> some View {
+        switch self.axes {
+        case .horizontal:
+            return AnyView(HStack {
+                self.content()
+            })
+        case .vertical:
+            return AnyView(VStack {
+                self.content()
+            })
+        default:
+            return AnyView(EmptyView())
+        }
     }
     
     func makeCoordinator() -> Coordinator {
